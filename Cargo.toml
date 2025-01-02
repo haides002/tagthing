@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 exempi2 = "0.2.0"
+chrono = "0.4.39"
