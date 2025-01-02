@@ -40,7 +40,7 @@ impl File {
             tags: Vec::new(),
         };
 
-        let mut i: i32 = 0;
+        let mut i: i32 = 1;
         loop {
             match xmp.get_array_item(DUBLIN_CORE_SCHEMA, "dc:subject", i, &mut PropFlags::empty()) {
                 Ok(tag) => file.tags.push(tag.to_str().unwrap().into()),
@@ -53,6 +53,24 @@ impl File {
     }
 }
 
+macro_rules! benchmark {
+    ($func:expr, $num:expr) => {
+        let now = std::time::Instant::now();
+        for _ in 0..$num {
+            let _ = $func;
+        }
+        println!("{}", now.elapsed().as_millis());
+    };
+}
+
 fn main() {
     println!("Hello, world!");
+    match File::read(PathBuf::from("./testing/test.jpg")) {
+        Ok(file) => {
+            dbg!(file.tags);
+        }
+        Err(_) => {}
+    }
+    benchmark!({ File::read(PathBuf::from("./testing/test.jpg")) }, 10000);
+    //benchmark!(println!("test"), 1000);
 }
