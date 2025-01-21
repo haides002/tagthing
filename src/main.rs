@@ -21,6 +21,7 @@ const XMP_SCHEMA: &str = "http://ns.adobe.com/xap/1.0/";
 //const TIME_FORMATS: &'static [&'static str] = &[EXIF_TIME_FORMAT]; // pointer to the array because
                                                                    // consts get copied on use
 
+#[derive(Debug)]
 struct File {
     path: PathBuf,
     date: Option<chrono::DateTime<FixedOffset>>,
@@ -36,13 +37,13 @@ impl File {
             Ok(xmp) => xmp,
             Err(err) => return Err(format!("{}", err)),
         };
-        println!(
-            "{}",
-            xmp.serialize(SerialFlags::empty(), 2)
-                .unwrap()
-                .to_str()
-                .unwrap()
-        );
+        //println!(
+        //    "{}",
+        //    xmp.serialize(SerialFlags::empty(), 2)
+        //        .unwrap()
+        //        .to_str()
+        //        .unwrap()
+        //);
 
         let date: Option<DateTime<chrono::FixedOffset>> = {
             let exif_date = xmp.get_property(
@@ -59,7 +60,15 @@ impl File {
                 parse_date(exif_date.to_str().unwrap()),
                 parse_date(dublin_core_date.to_str().unwrap())
             ];
-            todo!()
+            
+            let mut ret: Option<DateTime<chrono::FixedOffset>> = None;
+            for value in dates {
+                if let Ok(date) = value {
+                    // log that there are multiple dates maybe
+                    ret = Some(date);
+                }
+            }
+            ret
         };
 
         let mut file: File = File {
@@ -109,7 +118,7 @@ fn main() {
     println!("Hello, world!");
     match File::read(PathBuf::from("./testing/test.jpg")) {
         Ok(file) => {
-            dbg!(file.tags);
+            dbg!(file);
         }
         Err(_) => {}
     }
