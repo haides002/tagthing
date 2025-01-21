@@ -1,24 +1,24 @@
 use chrono::{DateTime, FixedOffset};
-use exempi2::{PropFlags, SerialFlags, XmpFile};
+use exempi2::{PropFlags, SerialFlags, XmpFile, XmpString};
 use std::path::PathBuf;
 
 const EXIF_SCHEMA: &str = "http://ns.adobe.com/exif/1.0/";
 const DUBLIN_CORE_SCHEMA: &str = "http://purl.org/dc/elements/1.1/";
 const XMP_SCHEMA: &str = "http://ns.adobe.com/xap/1.0/";
-const XMP_TIME_FORMATS: [&str; 9] = [
-    "%FT%T%.f%:z",
-    "%FT%T%.f",
-    "%FT%T%:z",
-    "%FT%T",
-    "%FT%H:%M%:z",
-    "%FT%H:%M",
-    "%F",
-    "%Y-%m",
-    "%Y",
-];
-const EXIF_TIME_FORMAT: &str = "%FT%T%.3f%:z";
-
-const TIME_FORMATS: &'static [&'static str] = &[EXIF_TIME_FORMAT]; // pointer to the array because
+//const XMP_TIME_FORMATS: [&str; 9] = [
+//    "%FT%T%.f%:z",
+//    "%FT%T%.f",
+//    "%FT%T%:z",
+//    "%FT%T",
+//    "%FT%H:%M%:z",
+//    "%FT%H:%M",
+//    "%F",
+//    "%Y-%m",
+//    "%Y",
+//];
+//const EXIF_TIME_FORMAT: &str = "%FT%T%.3f%:z";
+//
+//const TIME_FORMATS: &'static [&'static str] = &[EXIF_TIME_FORMAT]; // pointer to the array because
                                                                    // consts get copied on use
 
 struct File {
@@ -49,38 +49,16 @@ impl File {
                 EXIF_SCHEMA,
                 "exif:DateTimeOriginal",
                 &mut PropFlags::empty(),
-            );
-            let xmp_date = xmp.get_property(XMP_SCHEMA, "xmp:CreateDate", &mut PropFlags::empty());
+            ).unwrap_or_default();
+            let xmp_date = xmp.get_property(XMP_SCHEMA, "xmp:CreateDate", &mut PropFlags::empty()).unwrap_or_default();
             let dublin_core_date =
-                xmp.get_property(DUBLIN_CORE_SCHEMA, "dc:created", &mut PropFlags::empty());
-            let mut dates: [Option<DateTime<FixedOffset>>; 3] = [None; 3];
-            match exif_date {
-                Ok(property) => {
-                    if let Ok(parsed) =
-                        DateTime::parse_from_str(property.to_str().unwrap(), EXIF_TIME_FORMAT)
-                    {
-                        dates[0] = Some(parsed);
-                    };
-                }
-                Err(_) => {
-                    todo!()
-                }
-            }
-            match xmp_date {
-                Ok(property) => {
-                    if let Some(parsed) = parse_xmp_date(property.to_str().unwrap()) {
-                        //what
-                        dates[1] = Some(parsed);
-                    }
-                }
-                Err(_) => {
-                    todo!()
-                }
-            }
-            match dublin_core_date {
-                Ok(property) => todo!(),
-                Err(_) => todo!(),
-            }
+                xmp.get_property(DUBLIN_CORE_SCHEMA, "dc:created", &mut PropFlags::empty()).unwrap_or_default();
+
+            let dates: [Result<DateTime<FixedOffset>, (chrono::ParseError, chrono::ParseError)>; 3] = [
+                parse_date(xmp_date.to_str().unwrap()),
+                parse_date(exif_date.to_str().unwrap()),
+                parse_date(dublin_core_date.to_str().unwrap())
+            ];
             todo!()
         };
 
@@ -103,21 +81,18 @@ impl File {
     }
 }
 
-fn parse_xmp_date(date: &str) -> Option<DateTime<FixedOffset>> {
-    let check = |format: &str| {
-        if let Ok(parsed) = DateTime::parse_from_str(date, format) {
-            Some(parsed)
-        } else {
-            None
-        }
-    };
-
-    for format in XMP_TIME_FORMATS {
-        if let Some(parsed) = check(format) {
-            return Some(parsed);
+fn parse_date(date: &str) -> Result<DateTime<FixedOffset>, (chrono::ParseError, chrono::ParseError)> {
+    let rfc3339 = DateTime::parse_from_rfc3339(date);
+    let rfc2822: Result<DateTime<FixedOffset>, chrono::ParseError>;
+    if let Ok(parsed) = rfc3339 {
+        return Ok(parsed)
+    } else {
+        rfc2822 = DateTime::parse_from_rfc2822(date);
+        if let Ok(parsed) = rfc2822 {
+            return Ok(parsed);
         }
     }
-    None
+    Err((rfc3339.err().unwrap(), rfc2822.err().unwrap()))
 }
 
 macro_rules! benchmark {
