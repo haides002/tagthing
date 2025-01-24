@@ -1,5 +1,5 @@
-use chrono::{DateTime, FixedOffset};
-use exempi2::{PropFlags, SerialFlags, XmpFile, XmpString};
+use chrono::{DateTime, Datelike, FixedOffset, Timelike};
+use exempi2::{PropFlags, SerialFlags, Xmp, XmpFile, XmpString};
 use std::path::PathBuf;
 
 const EXIF_SCHEMA: &str = "http://ns.adobe.com/exif/1.0/";
@@ -19,7 +19,7 @@ const XMP_SCHEMA: &str = "http://ns.adobe.com/xap/1.0/";
 //const EXIF_TIME_FORMAT: &str = "%FT%T%.3f%:z";
 //
 //const TIME_FORMATS: &'static [&'static str] = &[EXIF_TIME_FORMAT]; // pointer to the array because
-                                                                   // consts get copied on use
+// consts get copied on use
 
 #[derive(Debug)]
 struct File {
@@ -28,8 +28,8 @@ struct File {
     tags: Vec<String>,
 }
 impl File {
-    fn read(path: PathBuf) -> Result<File, String> {
-        let file = match XmpFile::new_from_file(&path, exempi2::OpenFlags::READ) {
+    pub fn read(path: PathBuf) -> Result<File, String> {
+        let file = match XmpFile::new_from_file(&path, exempi2::OpenFlags::ONLY_XMP) {
             Ok(file) => file,
             Err(err) => return Err(format!("{}", err)),
         };
@@ -64,7 +64,8 @@ impl File {
             let mut ret: Option<DateTime<chrono::FixedOffset>> = None;
             for value in dates {
                 if let Ok(date) = value {
-                    // log that there are multiple dates maybe
+                    // maybe do some more intelligent date selection?
+                    println!("Date found: {}", date.to_string());
                     ret = Some(date);
                 }
             }
@@ -87,6 +88,63 @@ impl File {
         }
 
         Ok(file)
+    }
+    pub fn write_all(&self) -> Result<(), exempi2::Error> {
+        let mut file = match XmpFile::new_from_file(&self.path, exempi2::OpenFlags::FOR_UPDATE) {
+            Ok(file) => file,
+            Err(err) => return Err(err),
+        };
+        
+        let mut xmp = Xmp::new();
+        for (i, tag) in self.tags.iter().enumerate() {
+            xmp.set_array_item(DUBLIN_CORE_SCHEMA, "dc:subject", i as i32, tag, PropFlags::default());
+        }
+
+        if self.date.is_some() { // should we really overwrite dates? I mean if you wanna correct
+                                 // the original date you should be able to no?
+            xmp.set_property(DUBLIN_CORE_SCHEMA, "dc:created", &self.date.unwrap().to_string(), PropFlags::default());
+            xmp.set_property(EXIF_SCHEMA, "exif:DateTimeOriginal", &self.date.unwrap().to_string(), PropFlags::default());
+            xmp.set_property(XMP_SCHEMA, "xmp:CreateDate", &self.date.unwrap().to_string(), PropFlags::default());
+        }
+
+        file.put_xmp(&xmp).unwrap(); //TODO don't unwrap
+        file.close(exempi2::CloseFlags::SAFE_UPDATE);
+        Ok(())
+    }
+
+    pub fn write_tags(&self) -> Result<(), exempi2::Error> {
+        let mut file = match XmpFile::new_from_file(&self.path, exempi2::OpenFlags::FOR_UPDATE) {
+            Ok(file) => file,
+            Err(err) => return Err(err),
+        };
+
+        let mut xmp = Xmp::new();
+        for (i, tag) in self.tags.iter().enumerate() {
+            xmp.set_array_item(DUBLIN_CORE_SCHEMA, "dc:subject", i as i32, tag, PropFlags::default());
+        }
+
+        file.put_xmp(&xmp);
+        file.close(exempi2::CloseFlags::SAFE_UPDATE);
+        Ok(())
+    }
+    pub fn write_created_date(&self) -> Result<(), exempi2::Error> {
+        let mut file = match XmpFile::new_from_file(&self.path, exempi2::OpenFlags::FOR_UPDATE) {
+            Ok(file) => file,
+            Err(err) => return Err(err),
+        };
+
+        let mut xmp = Xmp::new();
+        
+        if self.date.is_some() { // should we really overwrite dates? I mean if you wanna correct
+                                 // the original date you should be able to no?
+            xmp.set_property(DUBLIN_CORE_SCHEMA, "dc:created", &self.date.unwrap().to_string(), PropFlags::default());
+            xmp.set_property(EXIF_SCHEMA, "exif:DateTimeOriginal", &self.date.unwrap().to_string(), PropFlags::default());
+            xmp.set_property(XMP_SCHEMA, "xmp:CreateDate", &self.date.unwrap().to_string(), PropFlags::default());
+        }
+
+        file.put_xmp(&xmp);
+        file.close(exempi2::CloseFlags::SAFE_UPDATE);
+        Ok(())
     }
 }
 
