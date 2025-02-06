@@ -5,22 +5,6 @@ use std::path::PathBuf;
 const EXIF_SCHEMA: &str = "http://ns.adobe.com/exif/1.0/";
 const DUBLIN_CORE_SCHEMA: &str = "http://purl.org/dc/elements/1.1/";
 const XMP_SCHEMA: &str = "http://ns.adobe.com/xap/1.0/";
-const RDF_SCHEMA: &str = "https://www.w3.org/TR/rdf11-schema/";
-//const XMP_TIME_FORMATS: [&str; 9] = [
-//    "%FT%T%.f%:z",
-//    "%FT%T%.f",
-//    "%FT%T%:z",
-//    "%FT%T",
-//    "%FT%H:%M%:z",
-//    "%FT%H:%M",
-//    "%F",
-//    "%Y-%m",
-//    "%Y",
-//];
-//const EXIF_TIME_FORMAT: &str = "%FT%T%.3f%:z";
-//
-//const TIME_FORMATS: &'static [&'static str] = &[EXIF_TIME_FORMAT]; // pointer to the array because
-// consts get copied on use
 
 #[derive(Debug)]
 struct File {
@@ -38,13 +22,13 @@ impl File {
             Ok(xmp) => xmp,
             Err(err) => return Err(format!("{}", err)),
         };
-        println!(
-            "{}",
-            xmp.serialize(SerialFlags::empty(), 2)
-                .unwrap()
-                .to_str()
-                .unwrap()
-        );
+        //println!(
+        //    "{}",
+        //    xmp.serialize(SerialFlags::empty(), 2)
+        //        .unwrap()
+        //        .to_str()
+        //        .unwrap()
+        //);
 
         let date: Option<DateTime<chrono::FixedOffset>> = {
             let exif_date = xmp.get_property(
@@ -80,6 +64,7 @@ impl File {
         };
 
         let mut i: i32 = 1;
+        //println!("{}", xmp.serialize(SerialFlags::empty(), 2).unwrap());
         loop {
             match xmp.get_array_item(DUBLIN_CORE_SCHEMA, "dc:subject", i, &mut PropFlags::empty()) {
                 Ok(tag) => 
@@ -102,25 +87,20 @@ impl File {
         let mut flags = PropFlags::default();
         flags.insert(PropFlags::VALUE_IS_ARRAY);
         flags.insert(PropFlags::ARRAY_IS_UNORDERED);
-        println!("adding array");
-        //let mut tags = String::from("<rdf:Bag>");
-        //for tag in &self.tags {
-        //    tags.push_str(&format!("<rdf:li>{}</rdf:li>", tag));
-        //}
-        //tags.push_str("</rdf:Bag>");
-        let tags = "ULTRAKILL";
-        xmp.set_property(DUBLIN_CORE_SCHEMA, "dc:subject", &tags, PropFlags::default());
-        xmp.set_property(DUBLIN_CORE_SCHEMA, "dc:subject", "type/photo;test", PropFlags::default());
-        println!("adding dates");
+        
+        for tag in &self.tags {
+            xmp.append_array_item(DUBLIN_CORE_SCHEMA, "dc:subject", flags, tag, PropFlags::default());
+        }
+
         if self.date.is_some() { // should we really overwrite dates? I mean if you wanna correct
                                  // the original date you should be able to no?
-            xmp.set_property(DUBLIN_CORE_SCHEMA, "dc:created", &self.date.unwrap().to_string(), PropFlags::default());
-            xmp.set_property(EXIF_SCHEMA, "exif:DateTimeOriginal", &self.date.unwrap().to_string(), PropFlags::default());
-            xmp.set_property(XMP_SCHEMA, "xmp:CreateDate", &self.date.unwrap().to_string(), PropFlags::default());
+            let _ = xmp.set_property(DUBLIN_CORE_SCHEMA, "dc:created", &self.date.unwrap().to_string(), PropFlags::default());
+            let _ = xmp.set_property(EXIF_SCHEMA, "exif:DateTimeOriginal", &self.date.unwrap().to_string(), PropFlags::default());
+            let _ = xmp.set_property(XMP_SCHEMA, "xmp:CreateDate", &self.date.unwrap().to_string(), PropFlags::default());
         }
-        println!("writing");
+        //println!("{}", xmp.serialize(SerialFlags::empty(), 2).unwrap());
         file.put_xmp(&xmp).unwrap(); //TODO don't unwrap
-        file.close(exempi2::CloseFlags::SAFE_UPDATE);
+        let _ = file.close(exempi2::CloseFlags::SAFE_UPDATE);
         Ok(())
     }
 
@@ -131,8 +111,12 @@ impl File {
         };
 
         let mut xmp = Xmp::new();
-        for (i, tag) in self.tags.iter().enumerate() {
-            xmp.set_array_item(DUBLIN_CORE_SCHEMA, "dc:subject", i as i32, tag, PropFlags::default());
+        let mut flags = PropFlags::default();
+        flags.insert(PropFlags::VALUE_IS_ARRAY);
+        flags.insert(PropFlags::ARRAY_IS_UNORDERED);
+
+        for tag in &self.tags {
+            xmp.append_array_item(DUBLIN_CORE_SCHEMA, "dc:subject", flags, tag, PropFlags::default());
         }
 
         file.put_xmp(&xmp);
@@ -188,7 +172,7 @@ fn main() {
     println!("Hello, world!");
     match File::read(PathBuf::from("./testing/test.jpg")) {
         Ok(file) => {
-            dbg!(file);
+            //dbg!(file);
         }
         Err(_) => {}
     }
@@ -199,9 +183,7 @@ fn main() {
                 "test".to_string(),
                 "ULTRAKILL".to_string()
             ];
-            println!("aa");
             file.write_all().unwrap();
-            println!("bb");
             dbg!(file);
         }
         Err(_) => {}
