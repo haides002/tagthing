@@ -5,6 +5,7 @@ use std::path::PathBuf;
 const EXIF_SCHEMA: &str = "http://ns.adobe.com/exif/1.0/";
 const DUBLIN_CORE_SCHEMA: &str = "http://purl.org/dc/elements/1.1/";
 const XMP_SCHEMA: &str = "http://ns.adobe.com/xap/1.0/";
+const RDF_SCHEMA: &str = "https://www.w3.org/TR/rdf11-schema/";
 //const XMP_TIME_FORMATS: [&str; 9] = [
 //    "%FT%T%.f%:z",
 //    "%FT%T%.f",
@@ -23,9 +24,9 @@ const XMP_SCHEMA: &str = "http://ns.adobe.com/xap/1.0/";
 
 #[derive(Debug)]
 struct File {
-    path: PathBuf,
-    date: Option<chrono::DateTime<FixedOffset>>,
-    tags: Vec<String>,
+    pub path: PathBuf,
+    pub date: Option<chrono::DateTime<FixedOffset>>,
+    pub tags: Vec<String>,
 }
 impl File {
     pub fn read(path: PathBuf) -> Result<File, String> {
@@ -37,13 +38,13 @@ impl File {
             Ok(xmp) => xmp,
             Err(err) => return Err(format!("{}", err)),
         };
-        //println!(
-        //    "{}",
-        //    xmp.serialize(SerialFlags::empty(), 2)
-        //        .unwrap()
-        //        .to_str()
-        //        .unwrap()
-        //);
+        println!(
+            "{}",
+            xmp.serialize(SerialFlags::empty(), 2)
+                .unwrap()
+                .to_str()
+                .unwrap()
+        );
 
         let date: Option<DateTime<chrono::FixedOffset>> = {
             let exif_date = xmp.get_property(
@@ -65,7 +66,7 @@ impl File {
             for value in dates {
                 if let Ok(date) = value {
                     // maybe do some more intelligent date selection?
-                    println!("Date found: {}", date.to_string());
+                    //println!("Date found: {}", date.to_string());
                     ret = Some(date);
                 }
             }
@@ -81,7 +82,9 @@ impl File {
         let mut i: i32 = 1;
         loop {
             match xmp.get_array_item(DUBLIN_CORE_SCHEMA, "dc:subject", i, &mut PropFlags::empty()) {
-                Ok(tag) => file.tags.push(tag.to_str().unwrap().into()),
+                Ok(tag) => 
+                    file.tags.push(tag.to_str().unwrap().into())
+                ,
                 Err(_) => break,
             }
             i += 1;
@@ -96,17 +99,26 @@ impl File {
         };
         
         let mut xmp = Xmp::new();
-        for (i, tag) in self.tags.iter().enumerate() {
-            xmp.set_array_item(DUBLIN_CORE_SCHEMA, "dc:subject", i as i32, tag, PropFlags::default());
-        }
-
+        let mut flags = PropFlags::default();
+        flags.insert(PropFlags::VALUE_IS_ARRAY);
+        flags.insert(PropFlags::ARRAY_IS_UNORDERED);
+        println!("adding array");
+        //let mut tags = String::from("<rdf:Bag>");
+        //for tag in &self.tags {
+        //    tags.push_str(&format!("<rdf:li>{}</rdf:li>", tag));
+        //}
+        //tags.push_str("</rdf:Bag>");
+        let tags = "ULTRAKILL";
+        xmp.set_property(DUBLIN_CORE_SCHEMA, "dc:subject", &tags, PropFlags::default());
+        xmp.set_property(DUBLIN_CORE_SCHEMA, "dc:subject", "type/photo;test", PropFlags::default());
+        println!("adding dates");
         if self.date.is_some() { // should we really overwrite dates? I mean if you wanna correct
                                  // the original date you should be able to no?
             xmp.set_property(DUBLIN_CORE_SCHEMA, "dc:created", &self.date.unwrap().to_string(), PropFlags::default());
             xmp.set_property(EXIF_SCHEMA, "exif:DateTimeOriginal", &self.date.unwrap().to_string(), PropFlags::default());
             xmp.set_property(XMP_SCHEMA, "xmp:CreateDate", &self.date.unwrap().to_string(), PropFlags::default());
         }
-
+        println!("writing");
         file.put_xmp(&xmp).unwrap(); //TODO don't unwrap
         file.close(exempi2::CloseFlags::SAFE_UPDATE);
         Ok(())
@@ -176,6 +188,20 @@ fn main() {
     println!("Hello, world!");
     match File::read(PathBuf::from("./testing/test.jpg")) {
         Ok(file) => {
+            dbg!(file);
+        }
+        Err(_) => {}
+    }
+    match File::read(PathBuf::from("./testing/test2.jpg")) {
+        Ok(mut file) => {
+            file.date = Some(DateTime::parse_from_rfc3339("2025-02-06T23:23:23+01:00").unwrap());
+            file.tags = vec![
+                "test".to_string(),
+                "ULTRAKILL".to_string()
+            ];
+            println!("aa");
+            file.write_all().unwrap();
+            println!("bb");
             dbg!(file);
         }
         Err(_) => {}
