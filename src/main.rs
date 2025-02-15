@@ -31,21 +31,27 @@ impl File {
         //);
 
         let date: Option<DateTime<chrono::FixedOffset>> = {
-            let exif_date = xmp.get_property(
-                EXIF_SCHEMA,
-                "exif:DateTimeOriginal",
-                &mut PropFlags::empty(),
-            ).unwrap_or_default();
-            let xmp_date = xmp.get_property(XMP_SCHEMA, "xmp:CreateDate", &mut PropFlags::empty()).unwrap_or_default();
-            let dublin_core_date =
-                xmp.get_property(DUBLIN_CORE_SCHEMA, "dc:created", &mut PropFlags::empty()).unwrap_or_default();
+            let exif_date = xmp
+                .get_property(
+                    EXIF_SCHEMA,
+                    "exif:DateTimeOriginal",
+                    &mut PropFlags::empty(),
+                )
+                .unwrap_or_default();
+            let xmp_date = xmp
+                .get_property(XMP_SCHEMA, "xmp:CreateDate", &mut PropFlags::empty())
+                .unwrap_or_default();
+            let dublin_core_date = xmp
+                .get_property(DUBLIN_CORE_SCHEMA, "dc:created", &mut PropFlags::empty())
+                .unwrap_or_default();
 
-            let dates: [Result<DateTime<FixedOffset>, (chrono::ParseError, chrono::ParseError)>; 3] = [
+            let dates: [Result<DateTime<FixedOffset>, (chrono::ParseError, chrono::ParseError)>;
+                3] = [
                 parse_date(xmp_date.to_str().unwrap()),
                 parse_date(exif_date.to_str().unwrap()),
-                parse_date(dublin_core_date.to_str().unwrap())
+                parse_date(dublin_core_date.to_str().unwrap()),
             ];
-            
+
             let mut ret: Option<DateTime<chrono::FixedOffset>> = None;
             for value in dates {
                 if let Ok(date) = value {
@@ -67,9 +73,7 @@ impl File {
         //println!("{}", xmp.serialize(SerialFlags::empty(), 2).unwrap());
         loop {
             match xmp.get_array_item(DUBLIN_CORE_SCHEMA, "dc:subject", i, &mut PropFlags::empty()) {
-                Ok(tag) => 
-                    file.tags.push(tag.to_str().unwrap().into())
-                ,
+                Ok(tag) => file.tags.push(tag.to_str().unwrap().into()),
                 Err(_) => break,
             }
             i += 1;
@@ -77,30 +81,10 @@ impl File {
 
         Ok(file)
     }
-    pub fn write_all(&self) -> Result<(), exempi2::Error> {
-        let mut file = match XmpFile::new_from_file(&self.path, exempi2::OpenFlags::FOR_UPDATE) {
-            Ok(file) => file,
-            Err(err) => return Err(err),
-        };
-        
-        let mut xmp = Xmp::new();
-        let mut flags = PropFlags::default();
-        flags.insert(PropFlags::VALUE_IS_ARRAY);
-        flags.insert(PropFlags::ARRAY_IS_UNORDERED);
-        
-        for tag in &self.tags {
-            xmp.append_array_item(DUBLIN_CORE_SCHEMA, "dc:subject", flags, tag, PropFlags::default());
-        }
 
-        if self.date.is_some() { // should we really overwrite dates? I mean if you wanna correct
-                                 // the original date you should be able to no?
-            let _ = xmp.set_property(DUBLIN_CORE_SCHEMA, "dc:created", &self.date.unwrap().to_string(), PropFlags::default());
-            let _ = xmp.set_property(EXIF_SCHEMA, "exif:DateTimeOriginal", &self.date.unwrap().to_string(), PropFlags::default());
-            let _ = xmp.set_property(XMP_SCHEMA, "xmp:CreateDate", &self.date.unwrap().to_string(), PropFlags::default());
-        }
-        //println!("{}", xmp.serialize(SerialFlags::empty(), 2).unwrap());
-        file.put_xmp(&xmp).unwrap(); //TODO don't unwrap
-        let _ = file.close(exempi2::CloseFlags::SAFE_UPDATE);
+    pub fn write_all(&self) -> Result<(), exempi2::Error> {
+        self.write_tags()?;
+        self.write_created_date()?;
         Ok(())
     }
 
@@ -116,7 +100,13 @@ impl File {
         flags.insert(PropFlags::ARRAY_IS_UNORDERED);
 
         for tag in &self.tags {
-            xmp.append_array_item(DUBLIN_CORE_SCHEMA, "dc:subject", flags, tag, PropFlags::default());
+            xmp.append_array_item(
+                DUBLIN_CORE_SCHEMA,
+                "dc:subject",
+                flags,
+                tag,
+                PropFlags::default(),
+            );
         }
 
         file.put_xmp(&xmp);
@@ -130,12 +120,28 @@ impl File {
         };
 
         let mut xmp = Xmp::new();
-        
-        if self.date.is_some() { // should we really overwrite dates? I mean if you wanna correct
-                                 // the original date you should be able to no?
-            xmp.set_property(DUBLIN_CORE_SCHEMA, "dc:created", &self.date.unwrap().to_string(), PropFlags::default());
-            xmp.set_property(EXIF_SCHEMA, "exif:DateTimeOriginal", &self.date.unwrap().to_string(), PropFlags::default());
-            xmp.set_property(XMP_SCHEMA, "xmp:CreateDate", &self.date.unwrap().to_string(), PropFlags::default());
+
+        if self.date.is_some() {
+            // should we really overwrite dates? I mean if you wanna correct
+            // the original date you should be able to no?
+            xmp.set_property(
+                DUBLIN_CORE_SCHEMA,
+                "dc:created",
+                &self.date.unwrap().to_string(),
+                PropFlags::default(),
+            );
+            xmp.set_property(
+                EXIF_SCHEMA,
+                "exif:DateTimeOriginal",
+                &self.date.unwrap().to_string(),
+                PropFlags::default(),
+            );
+            xmp.set_property(
+                XMP_SCHEMA,
+                "xmp:CreateDate",
+                &self.date.unwrap().to_string(),
+                PropFlags::default(),
+            );
         }
 
         file.put_xmp(&xmp);
@@ -144,11 +150,13 @@ impl File {
     }
 }
 
-fn parse_date(date: &str) -> Result<DateTime<FixedOffset>, (chrono::ParseError, chrono::ParseError)> {
+fn parse_date(
+    date: &str,
+) -> Result<DateTime<FixedOffset>, (chrono::ParseError, chrono::ParseError)> {
     let rfc3339 = DateTime::parse_from_rfc3339(date);
     let rfc2822: Result<DateTime<FixedOffset>, chrono::ParseError>;
     if let Ok(parsed) = rfc3339 {
-        return Ok(parsed)
+        return Ok(parsed);
     } else {
         rfc2822 = DateTime::parse_from_rfc2822(date);
         if let Ok(parsed) = rfc2822 {
@@ -179,15 +187,13 @@ fn main() {
     match File::read(PathBuf::from("./testing/test2.jpg")) {
         Ok(mut file) => {
             file.date = Some(DateTime::parse_from_rfc3339("2025-02-06T23:23:23+01:00").unwrap());
-            file.tags = vec![
-                "test".to_string(),
-                "ULTRAKILL".to_string()
-            ];
+            file.tags = vec!["test".to_string(), "ULTRAKILL".to_string()];
             file.write_all().unwrap();
             dbg!(file);
         }
         Err(_) => {}
     }
+
     //benchmark!({ File::read(PathBuf::from("./testing/test.jpg")) }, 10000);
     //benchmark!(println!("test"), 1000);
 }
