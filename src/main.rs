@@ -1,3 +1,7 @@
+use std::path::PathBuf;
+
+use tagcache::TagCache;
+
 mod file;
 #[macro_use]
 mod utils;
@@ -6,6 +10,11 @@ mod tagcache;
 
 fn main() {
     println!("Hello, world!");
+    use crate::file::File;
+    let mut test = File::read_dir(PathBuf::from("./testing"));
+    dbg!(&test);
+    let cache = TagCache::new(&test);
+    dbg!(cache);
 }
 
 #[cfg(test)]

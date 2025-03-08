@@ -1,6 +1,7 @@
 use crate::file::File;
 
 #[allow(dead_code)]
+#[derive(Debug)]
 pub struct TagCache(Vec<String>);
 impl TagCache {
     /// Create new TagCache from given Vec of files

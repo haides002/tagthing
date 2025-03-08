@@ -71,6 +71,23 @@ impl File {
 
         Ok(file)
     }
+    
+    /// Recursively reads all files from the specified directory
+    pub fn read_dir(path: PathBuf) -> Vec<Self> {
+        let mut files: Vec<Self> = Vec::new();
+        for dir_entry in std::fs::read_dir(path).expect("Path specified can not be read") {
+            if let Ok(entry) = dir_entry {
+                if entry.path().is_dir() {
+                    files.append(&mut File::read_dir(entry.path()));
+                } else {
+                    if let Ok(file) = File::read(entry.path()) {
+                        files.push(file);
+                    }
+                }
+            }
+        }
+        files
+    }
 
     pub fn write_all(&self) -> Result<(), exempi2::Error> {
         self.write_tags()?;
