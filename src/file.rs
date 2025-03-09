@@ -25,29 +25,43 @@ impl File {
         };
         let xmp = match file.get_new_xmp() {
             Ok(xmp) => xmp,
-            Err(err) => return Err(err)
+            Err(err) => return Err(err),
         };
-        //println!(
-        //    "{}",
-        //    xmp.serialize(SerialFlags::empty(), 2)
-        //        .unwrap()
-        //        .to_str()
-        //        .unwrap()
-        //);
+        println!(
+            "{}\n\n\n",
+            xmp.serialize(exempi2::SerialFlags::empty(), 2)
+                .unwrap()
+                .to_str()
+                .unwrap()
+        );
 
         let date: Option<DateTime<chrono::FixedOffset>> = {
-            if let Ok(date) = xmp.get_property(XMP_SCHEMA, "xmp:CreateDate", &mut PropFlags::empty()){
-                if let Ok(parsed) = parse_date(date.to_str().unwrap_or_default()) {
+            if let Ok(date) =
+                xmp.get_property(XMP_SCHEMA, "xmp:CreateDate", &mut PropFlags::empty())
+            {
+                if let Some(parsed) = parse_date(date.to_str().unwrap_or_default()) {
                     Some(parsed)
-                } else { None }
-            } else if let Ok(date) = xmp.get_property(EXIF_SCHEMA, "exif:DateTimeOriginal", &mut PropFlags::empty()) {
-                if let Ok(parsed) = parse_date(date.to_str().unwrap_or_default()) {
+                } else {
+                    None
+                }
+            } else if let Ok(date) = xmp.get_property(
+                EXIF_SCHEMA,
+                "exif:DateTimeOriginal",
+                &mut PropFlags::empty(),
+            ) {
+                if let Some(parsed) = parse_date(date.to_str().unwrap_or_default()) {
                     Some(parsed)
-                } else { None }
-            } else if let Ok(date) = xmp.get_property(DUBLIN_CORE_SCHEMA, "dc:created", &mut PropFlags::empty()){
-                if let Ok(parsed) = parse_date(date.to_str().unwrap_or_default()) {
+                } else {
+                    None
+                }
+            } else if let Ok(date) =
+                xmp.get_property(DUBLIN_CORE_SCHEMA, "dc:created", &mut PropFlags::empty())
+            {
+                if let Some(parsed) = parse_date(date.to_str().unwrap_or_default()) {
                     Some(parsed)
-                } else { None }
+                } else {
+                    None
+                }
             } else {
                 None
             }
@@ -71,7 +85,7 @@ impl File {
 
         Ok(file)
     }
-    
+
     /// Recursively reads all files from the specified directory
     pub fn read_dir(path: PathBuf) -> Vec<Self> {
         let mut files: Vec<Self> = Vec::new();
