@@ -14,17 +14,14 @@ pub fn parse_date(date: &str) -> Option<DateTime<FixedOffset>> {
     if let chrono::ParseResult::Ok(parsed) = DateTime::parse_from_rfc3339(date) {
         Some(parsed)
     } else if let chrono::ParseResult::Ok(parsed) = DateTime::parse_from_rfc2822(date) {
-        dbg!(&parsed);
         Some(parsed)
     } else if let Some(parsed) = other_formats
         .map(|format| DateTime::parse_from_str(date, format))
         .iter()
         .find(|parsed| parsed.is_ok())
     {
-        dbg!(&parsed);
         Some(parsed.unwrap())
     } else {
-        dbg!(date);
         None
     }
 }

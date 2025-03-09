@@ -9,11 +9,11 @@ const DUBLIN_CORE_SCHEMA: &str = "http://purl.org/dc/elements/1.1/";
 const XMP_SCHEMA: &str = "http://ns.adobe.com/xap/1.0/";
 
 /// File wrapper storing the path, created date and tags
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct File {
-    path: PathBuf,
-    date: Option<chrono::DateTime<FixedOffset>>,
-    tags: Vec<String>,
+    pub path: PathBuf,
+    pub date: Option<chrono::DateTime<FixedOffset>>,
+    pub tags: Vec<String>,
 }
 #[allow(dead_code)]
 impl File {
@@ -27,13 +27,13 @@ impl File {
             Ok(xmp) => xmp,
             Err(err) => return Err(err),
         };
-        println!(
-            "{}\n\n\n",
-            xmp.serialize(exempi2::SerialFlags::empty(), 2)
-                .unwrap()
-                .to_str()
-                .unwrap()
-        );
+        //println!(
+        //    "{}\n\n\n",
+        //    xmp.serialize(exempi2::SerialFlags::empty(), 2)
+        //        .unwrap()
+        //        .to_str()
+        //        .unwrap()
+        //);
 
         let date: Option<DateTime<chrono::FixedOffset>> = {
             if let Ok(date) =

@@ -12,4 +12,10 @@ pkgs.mkShell {
 
     exempi
   ];
+        LD_LIBRARY_PATH = with pkgs; lib.makeLibraryPath [
+                libGL
+                libxkbcommon
+                wayland
+        ];
+
 }
