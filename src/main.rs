@@ -17,7 +17,7 @@ fn main() {
         || -> (Tagthing, Task<_>) {
             (
                 Tagthing::new(PathBuf::from(
-                    "/home/inus/downloads/Anime-Girls-Holding-Programming-Books",
+                    "/home/linus/downloads/Anime-Girls-Holding-Programming-Books/",
                 )),
                 Task::none(),
             )
