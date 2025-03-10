@@ -29,7 +29,7 @@ pub enum Message {
 }
 
 impl Tagthing {
-    pub fn new(path: PathBuf) -> Self {
+    pub fn new() -> Self {
         Tagthing {
             ..Default::default()
         }
@@ -59,14 +59,15 @@ impl Tagthing {
 
             for (i, file) in self.files.iter().enumerate() {
                 image_row = image_row.push(
-                    button(
+                    //button(
                         image(&file.path)
                             .content_fit(iced::ContentFit::Contain)
-                    )
-                    .on_press(Message::SelectImage(i))
-                    .style(|_, _| button::Style::default())
-                    .width(Length::Fill)
-                    .padding(0),
+                            .width(Length::Fill)
+                    //)
+                    //.on_press(Message::SelectImage(i))
+                    //.style(|_, _| button::Style::default())
+                    //.width(Length::Fill)
+                    //.padding(0),
                 );
                 if (i + 1) % IMAGES_PER_ROW == 0 {
                     images = images.push(image_row);

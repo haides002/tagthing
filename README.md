@@ -1,5 +1,5 @@
 # Todo
-
+- [ ] maybe save the images as bytes in the file struct (with an enum) because that means we won't have to read from disk on every button click
 - [ ] thumbnailing
 - [ ] no segfaulting
 - [ ] make dates work
