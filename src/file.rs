@@ -9,7 +9,7 @@ const DUBLIN_CORE_SCHEMA: &str = "http://purl.org/dc/elements/1.1/";
 const XMP_SCHEMA: &str = "http://ns.adobe.com/xap/1.0/";
 
 /// File wrapper storing the path, created date and tags
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash)]
 pub struct File {
     pub path: PathBuf,
     pub date: Option<chrono::DateTime<FixedOffset>>,

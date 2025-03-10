@@ -11,6 +11,7 @@ mod tagcache;
 mod ui;
 
 fn main() {
+    #[cfg(timing)]
     println!("Hello, world!");
 
     let gallery_path = std::env::args().collect::<Vec<String>>().iter().nth(1).expect("No gallery path specified").clone();

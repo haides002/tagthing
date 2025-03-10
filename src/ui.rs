@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use iced::{
     widget::{
         button, column, container, image, row, scrollable, text, Button, Column, Image, Row,
-        TextInput,
+        TextInput, lazy
     },
     Element,
     Length::{self, FillPortion},
@@ -53,12 +53,21 @@ impl Tagthing {
         let gallery_view = container(scrollable({
             let mut images = Column::new();
             let mut image_row: Row<_> = Row::new();
+            println!("Starting to load images...");
+            let now = std::time::Instant::now();
+
             for (i, file) in self.files.iter().enumerate() {
                 image_row = image_row.push(
                     button(
+                        //lazy(file, |f| { // lazy breaks the layout
+                        //    image(&f.path)
+                        //        .width(Length::Fill)
+                        //        .content_fit(iced::ContentFit::Contain)
+                        //    },
+                        //)
                         image(&file.path)
                             .width(Length::Fill)
-                            .content_fit(iced::ContentFit::Contain),
+                            .content_fit(iced::ContentFit::Contain)
                     )
                     .on_press(Message::SelectImage(i))
                     .style(|_, _| button::Style::default())
@@ -69,6 +78,7 @@ impl Tagthing {
                     image_row = Row::with_capacity(4);
                 }
             }
+            println!("Loading images took {} microseconds", now.elapsed().as_micros());
             images.push(image_row)
         }));
 
@@ -100,6 +110,7 @@ impl Tagthing {
             }
         }));
 
+        println!("Returning view");
         row![
             filter_view.width(FillPortion(1)),
             gallery_view.width(FillPortion(3)),
