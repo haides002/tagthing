@@ -13,16 +13,16 @@ mod ui;
 fn main() {
     println!("Hello, world!");
 
+    let gallery_path = std::env::args().collect::<Vec<String>>().iter().nth(1).expect("No gallery path specified").clone();
+
     let _ = iced::application("Tagthing", ui::Tagthing::update, ui::Tagthing::view).run_with(
         || -> (Tagthing, Task<_>) {
             (
                 Tagthing::new(PathBuf::from(
-                    "/home/linus/downloads/Anime-Girls-Holding-Programming-Books/",
+                    gallery_path,
                 )),
                 Task::none(),
             )
         },
     );
-
-    dbg!(parse_date("2022-03-02T22:37:46"));
 }

@@ -3,6 +3,13 @@ name = "tagthing"
 version = "0.1.0"
 edition = "2021"
 
+[profile.dev]
+debug = 0
+
+[profile.release]
+incremental = true
+debug = 0
+
 [dependencies]
 exempi2 = "0.2.0"
 chrono = "0.4.39"
