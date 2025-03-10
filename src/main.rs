@@ -10,8 +10,8 @@ mod utils;
 mod tagcache;
 mod ui;
 
-fn main() {
-    #[cfg(timing)]
+#[tokio::main]
+async fn main() {
     println!("Hello, world!");
 
     let gallery_path = std::env::args().collect::<Vec<String>>().iter().nth(1).expect("No gallery path specified").clone();
@@ -19,10 +19,8 @@ fn main() {
     let _ = iced::application("Tagthing", ui::Tagthing::update, ui::Tagthing::view).run_with(
         || -> (Tagthing, Task<_>) {
             (
-                Tagthing::new(PathBuf::from(
-                    gallery_path,
-                )),
-                Task::none(),
+                Tagthing::default(),
+                Task::perform(crate::file::File::read_dir(PathBuf::from(gallery_path)), crate::ui::Message::FilesRead),
             )
         },
     );

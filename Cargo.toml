@@ -15,3 +15,4 @@ debug = 0
 exempi2 = "0.2.0"
 chrono = "0.4.39"
 iced = { version = "0.13.1", features = ["image", "lazy"] }
+tokio = { version = "1.44.0", features = ["full"] }

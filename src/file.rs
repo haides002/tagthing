@@ -1,5 +1,6 @@
 use chrono::{DateTime, FixedOffset};
 use exempi2::{PropFlags, Xmp, XmpFile};
+use iced::{widget::{Image, image}, Element};
 use std::path::PathBuf;
 
 use crate::utils::parse_date;
@@ -9,7 +10,7 @@ const DUBLIN_CORE_SCHEMA: &str = "http://purl.org/dc/elements/1.1/";
 const XMP_SCHEMA: &str = "http://ns.adobe.com/xap/1.0/";
 
 /// File wrapper storing the path, created date and tags
-#[derive(Debug, Clone, Hash)]
+#[derive(Debug, Clone)]
 pub struct File {
     pub path: PathBuf,
     pub date: Option<chrono::DateTime<FixedOffset>>,
@@ -18,7 +19,7 @@ pub struct File {
 #[allow(dead_code)]
 impl File {
     /// Reads file from specified path, returns a file or the Error
-    pub fn read(path: PathBuf) -> Result<File, exempi2::Error> {
+    pub async fn read(path: PathBuf) -> Result<File, exempi2::Error> {
         let file = match XmpFile::new_from_file(&path, exempi2::OpenFlags::ONLY_XMP) {
             Ok(file) => file,
             Err(err) => return Err(err),
@@ -87,14 +88,18 @@ impl File {
     }
 
     /// Recursively reads all files from the specified directory
-    pub fn read_dir(path: PathBuf) -> Vec<Self> {
+    pub async fn read_dir(path: PathBuf) -> Vec<Self> {
         let mut files: Vec<Self> = Vec::new();
         for dir_entry in std::fs::read_dir(path).expect("Path specified can not be read") {
             if let Ok(entry) = dir_entry {
                 if entry.path().is_dir() {
-                    files.append(&mut File::read_dir(entry.path()));
+                    files.append(
+                        &mut Box::pin(
+                            File::read_dir(entry.path())
+                        ).await
+                    );
                 } else {
-                    if let Ok(file) = File::read(entry.path()) {
+                    if let Ok(file) = File::read(entry.path()).await {
                         files.push(file);
                     }
                 }
@@ -194,5 +199,9 @@ impl File {
             }
             None => Err(()),
         }
+    }
+
+    pub async fn element(&self) -> Image {
+        image(&self.path)
     }
 }

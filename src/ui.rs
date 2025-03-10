@@ -17,6 +17,7 @@ pub struct Tagthing {
     files: Vec<File>,
     selected: Vec<usize>,
     query: String,
+    details_view: String,
 }
 
 #[derive(Debug, Clone)]
@@ -24,15 +25,12 @@ pub enum Message {
     SelectImage(usize),
     UpdateQuery(String),
     TagSelected(String),
+    FilesRead(Vec<crate::file::File>),
 }
 
 impl Tagthing {
     pub fn new(path: PathBuf) -> Self {
-        let files = crate::file::File::read_dir(path);
-
         Tagthing {
-            tag_cache: crate::tagcache::TagCache::new(&files),
-            files,
             ..Default::default()
         }
     }
@@ -42,10 +40,15 @@ impl Tagthing {
             Message::SelectImage(index) => self.selected = vec![index],
             Message::UpdateQuery(query) => self.query = query,
             Message::TagSelected(tag) => self.query = tag,
+            Message::FilesRead(files) => {
+                self.tag_cache = TagCache::new(&files);
+                self.files = files;
+            },
         }
     }
 
     pub fn view(&self) -> Element<Message> {
+        println!("view was called");
         const IMAGES_PER_ROW: usize = 4;
         let filter_view = container(column![TextInput::new("Search ...", &self.query)
             .on_input(|input: String| Message::UpdateQuery(input))]);
@@ -53,24 +56,16 @@ impl Tagthing {
         let gallery_view = container(scrollable({
             let mut images = Column::new();
             let mut image_row: Row<_> = Row::new();
-            println!("Starting to load images...");
-            let now = std::time::Instant::now();
 
             for (i, file) in self.files.iter().enumerate() {
                 image_row = image_row.push(
                     button(
-                        //lazy(file, |f| { // lazy breaks the layout
-                        //    image(&f.path)
-                        //        .width(Length::Fill)
-                        //        .content_fit(iced::ContentFit::Contain)
-                        //    },
-                        //)
                         image(&file.path)
-                            .width(Length::Fill)
                             .content_fit(iced::ContentFit::Contain)
                     )
                     .on_press(Message::SelectImage(i))
                     .style(|_, _| button::Style::default())
+                    .width(Length::Fill)
                     .padding(0),
                 );
                 if (i + 1) % IMAGES_PER_ROW == 0 {
@@ -78,7 +73,6 @@ impl Tagthing {
                     image_row = Row::with_capacity(4);
                 }
             }
-            println!("Loading images took {} microseconds", now.elapsed().as_micros());
             images.push(image_row)
         }));
 
@@ -110,7 +104,6 @@ impl Tagthing {
             }
         }));
 
-        println!("Returning view");
         row![
             filter_view.width(FillPortion(1)),
             gallery_view.width(FillPortion(3)),
